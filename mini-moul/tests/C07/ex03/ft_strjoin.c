@@ -66,6 +66,23 @@ int main(void)
             .strs = (char*[]){ "", "", "" },
             .sep = ":",
             .expected = "::"
+        },
+        {
+            .desc = "ft_strjoin stops at first null in each input string",
+            .size = 2,
+            .strs = (char*[]){
+                (char[]){'H', 'i', '\0', 'X', '\0'},
+                (char[]){'4', '2', '\0', 'Y', '\0'}
+            },
+            .sep = "-",
+            .expected = "Hi-42"
+        },
+        {
+            .desc = "ft_strjoin stops at first null in separator",
+            .size = 3,
+            .strs = (char*[]){ "A", "B", "C" },
+            .sep = (char[]){'|', '\0', '+', '\0'},
+            .expected = "A|B|C"
         }
     };
     int count = sizeof(tests) / sizeof(tests[0]);

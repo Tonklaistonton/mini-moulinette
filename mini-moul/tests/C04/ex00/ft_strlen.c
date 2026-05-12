@@ -37,6 +37,21 @@ int main(void)
             .expected_output = 5,
         },
         {
+            .desc = "Embedded null terminator with trailing bytes",
+            .input = (char[]){'H', 'e', 'l', 'l', 'o', '\0', 'W', 'o', 'r', 'l', 'd', '\0'},
+            .expected_output = 5,
+        },
+        {
+            .desc = "Starts with null terminator",
+            .input = (char[]){'\0', 'A', 'B', 'C', '\0'},
+            .expected_output = 0,
+        },
+        {
+            .desc = "Stops exactly after first character null terminator",
+            .input = (char[]){'A', '\0', 'B', 'C', '\0'},
+            .expected_output = 1,
+        },
+        {
             .desc = "Very long string",
             .input = "abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ",
             .expected_output = 62,
