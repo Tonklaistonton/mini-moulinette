@@ -7,7 +7,7 @@
 typedef struct s_test
 {
 	char	*desc;
-	char	dest[20];
+	char	*dest;
 	char	*src;
 	char	*expected;
 } t_test;
@@ -55,20 +55,41 @@ int main(void)
 
 int	run_tests(t_test *tests, int count)
 {
-	int i;
-	int error = 0;
+	int				i;
+	int				error = 0;
+	const unsigned char	sentinel = 0x5A;
 
 	for (i = 0; i < count; i++)
 	{
-		ft_strcat(tests[i].dest, tests[i].src);
+		int		has_error = 0;
+		char		dest[100];
+		size_t		expected_len = strlen(tests[i].expected);
+		char		*result;
 
-		if (strcmp(tests[i].dest, tests[i].expected) != 0)
+		memset(dest, sentinel, sizeof(dest));
+		strcpy(dest, tests[i].dest);
+
+		result = ft_strcat(dest, tests[i].src);
+
+		if (result != dest)
 		{
-			printf("    " RED "[%d] %s Expected \"%s\", got \"%s\"\n", i + 1, tests[i].desc, tests[i].expected, tests[i].dest);
-			error -= 1;
+			printf("    " RED "[%d] %s Expected return value to be pointer to dest\n" DEFAULT, i + 1, tests[i].desc);
+			has_error = 1;
 		}
+		if (strcmp(dest, tests[i].expected) != 0)
+		{
+			printf("    " RED "[%d] %s Expected \"%s\", got \"%s\"\n" DEFAULT, i + 1, tests[i].desc, tests[i].expected, dest);
+			has_error = 1;
+		}
+		if (dest[expected_len] != '\0')
+		{
+			printf("    " RED "[%d] %s Missing null terminator at expected end\n" DEFAULT, i + 1, tests[i].desc);
+			has_error = 1;
+		}
+		if (has_error)
+			error -= 1;
 		else
-			printf("  " GREEN CHECKMARK GREY " [%d] %s Expected \"%s\", got \"%s\"\n" DEFAULT, i + 1, tests[i].desc, tests[i].expected, tests[i].dest);
+			printf("  " GREEN CHECKMARK GREY " [%d] %s Expected \"%s\", got \"%s\"\n" DEFAULT, i + 1, tests[i].desc, tests[i].expected, dest);
 	}
 	return (error);
 }

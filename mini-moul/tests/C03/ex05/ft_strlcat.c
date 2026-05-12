@@ -48,7 +48,7 @@ int main(void)
             .src = "Born to code",
             .dest = "1337 42",
             .size = 7,
-            .expected_return = 18,
+            .expected_return = 19,
             .expected_output = "1337 42",
         },
         {
