@@ -23,18 +23,32 @@ result=""
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 dirname_found=0
 
+get_compilation_flags()
+{
+    case "$1" in
+        C06|C07|C08)
+            echo "-Wall -Wextra -Werror -std=c99"
+            ;;
+        *)
+            echo "-Wall -Wextra -Werror"
+            ;;
+    esac
+}
+
 main()
 {
+    project_name="$1"
     start_time=$(date +%s)
+    read -r -a compile_flags <<< "$(get_compilation_flags "$project_name")"
     #print_collected_files
     for dir in ./tests/* ; do
         dirname="$(basename "$dir")"
         available_assignments+="$dirname "
         
-        if [ -d "$dir" ] && [ "$dirname" == "$1" ]; then
+        if [ -d "$dir" ] && [ "$dirname" == "$project_name" ]; then
             dirname_found=1
             print_header
-            printf "${GREEN} Generating test for ${1}...\n${DEFAULT}"
+            printf "${GREEN} Generating test for ${project_name}...\n${DEFAULT}"
             space
             dirname_found=1
             index=0
@@ -46,7 +60,7 @@ main()
                 test_name="$(ls $assignment/*.c | head -n 1)"
                 test_name="$(basename "$test_name")"
                 
-                if cc -Wall -Werror -Wextra -o test1 $(ls $assignment/*.c | head -n 1); then
+                if cc "${compile_flags[@]}" -o test1 $(ls $assignment/*.c | head -n 1); then
                     rm test1
                     checks=$((checks+1))
                     passed=$((passed+1))
@@ -58,7 +72,7 @@ main()
                             ((index2++))
                             checks=$((checks+1))
                             
-                            if cc -o ${test%.c} $test 2> /dev/null; then
+                            if cc "${compile_flags[@]}" -o ${test%.c} $test 2> /dev/null; then
                                 
                                 if ./${test%.c} = 0; then
                                     passed=$((passed+1))

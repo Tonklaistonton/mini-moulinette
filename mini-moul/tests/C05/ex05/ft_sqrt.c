@@ -42,7 +42,16 @@ int main(void)
             .n = -5,
             .expected = 0,
         },
-        // Add more test cases here
+        {
+            .desc = "Square root of large perfect square",
+            .n = 2147395600,
+            .expected = 46340,
+        },
+        {
+            .desc = "Square root of INT_MAX",
+            .n = 2147483647,
+            .expected = 0,
+        },
     };
     int count = sizeof(tests) / sizeof(tests[0]);
 

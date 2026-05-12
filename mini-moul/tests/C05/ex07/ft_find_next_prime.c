@@ -42,7 +42,16 @@ int main(void)
             .n = -5,
             .expected = 2,
         },
-        // Add more test cases here
+        {
+            .desc = "Next prime after 7919",
+            .n = 7919,
+            .expected = 7919,
+        },
+        {
+            .desc = "Next prime after 7920",
+            .n = 7920,
+            .expected = 7927,
+        },
     };
     int count = sizeof(tests) / sizeof(tests[0]);
 
