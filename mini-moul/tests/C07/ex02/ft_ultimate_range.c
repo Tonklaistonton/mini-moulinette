@@ -114,7 +114,10 @@ int run_tests(t_test *tests, int count)
             printf("    " RED "[%d] %s Expected return %d, got %d\n" DEFAULT, i + 1, tests[i].desc, tests[i].expected_return, range_size);
             error--;
             if (result != NULL)
+            {
                 free(result);
+                result = NULL;
+            }
             continue;
         }
         else if (tests[i].expected_range == NULL && result == NULL)
@@ -152,7 +155,10 @@ int run_tests(t_test *tests, int count)
         }
 
         if (result != NULL)
+        {
             free(result);
+            result = NULL;
+        }
     }
 
     return error;

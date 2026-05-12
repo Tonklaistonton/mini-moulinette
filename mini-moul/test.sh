@@ -37,17 +37,18 @@ get_compilation_flags()
 
 main()
 {
+    project_name="$1"
     start_time=$(date +%s)
-    read -r -a compile_flags <<< "$(get_compilation_flags "$1")"
+    read -r -a compile_flags <<< "$(get_compilation_flags "$project_name")"
     #print_collected_files
     for dir in ./tests/* ; do
         dirname="$(basename "$dir")"
         available_assignments+="$dirname "
         
-        if [ -d "$dir" ] && [ "$dirname" == "$1" ]; then
+        if [ -d "$dir" ] && [ "$dirname" == "$project_name" ]; then
             dirname_found=1
             print_header
-            printf "${GREEN} Generating test for ${1}...\n${DEFAULT}"
+            printf "${GREEN} Generating test for ${project_name}...\n${DEFAULT}"
             space
             dirname_found=1
             index=0
