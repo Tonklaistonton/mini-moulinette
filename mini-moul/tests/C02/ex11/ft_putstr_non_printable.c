@@ -63,6 +63,11 @@ int main(void)
 		.src = "0123456789ABCDEF",
 		.expected = "0123456789ABCDEF",
 	    },
+	    {
+		.desc = "Stop at null terminator at end of text",
+		.src = "End of text\0ignored",
+		.expected = "End of text",
+	    },
 	    // Add more test cases here
 	};
 	int count = sizeof(tests) / sizeof(tests[0]);
