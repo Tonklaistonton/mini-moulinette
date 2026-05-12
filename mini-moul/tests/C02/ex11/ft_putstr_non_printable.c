@@ -64,7 +64,7 @@ int main(void)
 		.expected = "0123456789ABCDEF",
 	    },
 	    {
-		.desc = "Stop at \\0 at end of text",
+		.desc = "Stop at null terminator at end of text",
 		.src = "End of text\0ignored",
 		.expected = "End of text",
 	    },
