@@ -52,6 +52,20 @@ int main(void)
             .strs = (char*[]){ "Hello", "world" },
             .sep = "",
             .expected = "Helloworld"
+        },
+        {
+            .desc = "ft_strjoin with long separator",
+            .size = 3,
+            .strs = (char*[]){ "ab", "cd", "ef" },
+            .sep = "***",
+            .expected = "ab***cd***ef"
+        },
+        {
+            .desc = "ft_strjoin with all empty strings",
+            .size = 3,
+            .strs = (char*[]){ "", "", "" },
+            .sep = ":",
+            .expected = "::"
         }
     };
     int count = sizeof(tests) / sizeof(tests[0]);

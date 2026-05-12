@@ -60,6 +60,22 @@ int main(void)
             .expected_range = NULL,
         },
         {
+            .desc = "ft_ultimate_range with one value",
+            .min = 5,
+            .max = 6,
+            .range = NULL,
+            .expected_return = 1,
+            .expected_range = (int[]){5},
+        },
+        {
+            .desc = "ft_ultimate_range across zero",
+            .min = -1,
+            .max = 1,
+            .range = NULL,
+            .expected_return = 2,
+            .expected_range = (int[]){-1, 0},
+        },
+        {
             .desc = "ft_ultimate_range with both min and max equal to 2147483647",
             .min = 2147483647,
             .max = 2147483647,
@@ -88,12 +104,17 @@ int run_tests(t_test *tests, int count)
 
     for (i = 0; i < count; i++)
     {
-        int *result;
+        int *result = NULL;
         int expected_size = (tests[i].max - tests[i].min);
 
         int range_size = ft_ultimate_range(&result, tests[i].min, tests[i].max);
 
-        if (tests[i].expected_range == NULL && result == NULL)
+        if (range_size != tests[i].expected_return)
+        {
+            printf("    " RED "[%d] %s Expected return %d, got %d\n" DEFAULT, i + 1, tests[i].desc, tests[i].expected_return, range_size);
+            error--;
+        }
+        else if (tests[i].expected_range == NULL && result == NULL)
         {
             printf("  " GREEN CHECKMARK GREY " [%d] %s Expected NULL, got NULL\n" DEFAULT, i + 1, tests[i].desc);
         }
@@ -127,7 +148,8 @@ int run_tests(t_test *tests, int count)
             printf("  " GREEN CHECKMARK GREY " [%d] %s Passed\n" DEFAULT, i + 1, tests[i].desc);
         }
 
-        free(result);
+        if (result != NULL)
+            free(result);
     }
 
     return error;

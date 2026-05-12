@@ -18,6 +18,11 @@ int main(void)
 {
     t_test tests[] = {
         {
+            .desc = "Is 0 prime",
+            .n = 0,
+            .expected = 0,
+        },
+        {
             .desc = "Is 1 prime",
             .n = 1,
             .expected = 0,
@@ -50,6 +55,16 @@ int main(void)
         {
             .desc = "Is a negative number prime",
             .n = -5,
+            .expected = 0,
+        },
+        {
+            .desc = "Is 7919 prime",
+            .n = 7919,
+            .expected = 1,
+        },
+        {
+            .desc = "Is 7920 prime",
+            .n = 7920,
             .expected = 0,
         },
     };
