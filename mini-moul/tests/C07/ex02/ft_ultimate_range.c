@@ -70,10 +70,10 @@ int main(void)
         {
             .desc = "ft_ultimate_range across zero",
             .min = -1,
-            .max = 1,
+            .max = 2,
             .range = NULL,
-            .expected_return = 2,
-            .expected_range = (int[]){-1, 0},
+            .expected_return = 3,
+            .expected_range = (int[]){-1, 0, 1},
         },
         {
             .desc = "ft_ultimate_range with both min and max equal to 2147483647",
