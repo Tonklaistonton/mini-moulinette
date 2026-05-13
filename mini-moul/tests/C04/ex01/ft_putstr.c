@@ -77,9 +77,11 @@ int run_tests(t_test *tests, int count)
 
                 // Open the output file and check its contents
                 FILE *fp = fopen("output.txt", "r");
-
-                fgets(buffer, sizeof(buffer), fp);
-                fclose(fp);
+                if (fp != NULL)
+                {
+                        fgets(buffer, sizeof(buffer), fp);
+                        fclose(fp);
+                }
 
                 // Check that the output matches the expected value
                 if (strcmp(buffer, tests[i].expected) != 0)
@@ -91,6 +93,9 @@ int run_tests(t_test *tests, int count)
                 {
                         printf("  " GREEN CHECKMARK GREY " [%d] %s output \"%s\" as expected\n" DEFAULT, i + 1, tests[i].desc, buffer);
                 }
+
+                // Delete the captured output file so the test leaves no residue.
+                remove("output.txt");
         }
         return (error);
 }
