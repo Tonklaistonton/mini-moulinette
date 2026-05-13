@@ -1,6 +1,7 @@
 #!/bin/bash
 
-source config.sh
+SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
+source "$SCRIPT_DIR/config.sh"
 
 #utils
 index=0
@@ -15,13 +16,18 @@ checks=0
 passed=0
 marks=0
 questions=0
+norminette_passed=0
+norminette_failed=0
+norminette_skipped=0
 dirname_found=0
 break_score=0
 score_false=0
 available_assignments=""
 result=""
-SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 dirname_found=0
+student_root=""
+workspace_root=""
+tests_root=""
 
 get_compilation_flags()
 {
@@ -35,31 +41,116 @@ get_compilation_flags()
     esac
 }
 
+run_norminette()
+{
+    local root="$1"
+    local file
+    local output
+    local relative_path
+    local found=0
+
+    if ! command -v norminette >/dev/null 2>&1; then
+        printf "${GREY}norminette not found, skipping norminette checks.${DEFAULT}\n"
+        norminette_skipped=1
+        space
+        return 0
+    fi
+
+    while IFS= read -r file; do
+        [ -n "$file" ] || continue
+        found=1
+        relative_path="${file#"$root"/}"
+        output=$(norminette "$file" 2>&1)
+        if [ $? -eq 0 ]; then
+            norminette_passed=$((norminette_passed+1))
+            printf "${GREEN}NORMINETTE PASS${DEFAULT} ${PURPLE}%s${DEFAULT}\n" "$relative_path"
+        else
+            norminette_failed=$((norminette_failed+1))
+            printf "${RED}NORMINETTE FAIL${DEFAULT} ${PURPLE}%s${DEFAULT}\n" "$relative_path"
+            if [ -n "$output" ]; then
+                printf "%s\n" "$output" | sed 's/^/    /'
+            fi
+        fi
+    done < <(find "$root" -type f \( -name '*.c' -o -name '*.h' \))
+
+    if [ $found -eq 0 ]; then
+        printf "${GREY}No source files found for norminette.${DEFAULT}\n"
+    fi
+    space
+}
+
+prepare_workspace()
+{
+    local source_root="$1"
+    local target_root="$2"
+    local entry
+
+    mkdir -p "$target_root"
+    cp -R "$SCRIPT_DIR" "$target_root/mini-moul"
+
+    for entry in "$source_root"/*; do
+        [ -e "$entry" ] || continue
+        if [ -d "$entry" ]; then
+            case "$(basename "$entry")" in
+                ex[0-9][0-9])
+                    ln -s "$entry" "$target_root/$(basename "$entry")"
+                    ;;
+            esac
+        fi
+    done
+}
+
+cleanup_workspace()
+{
+    [ -n "$workspace_root" ] && rm -rf "$workspace_root"
+}
+
 main()
 {
     project_name="$1"
+    student_root="$2"
     start_time=$(date +%s)
     read -r -a compile_flags <<< "$(get_compilation_flags "$project_name")"
-    #print_collected_files
-    for dir in ./tests/* ; do
+    print_header
+    run_norminette "$student_root"
+
+    workspace_root=$(mktemp -d "/tmp/mini-moul.XXXXXX")
+    prepare_workspace "$student_root" "$workspace_root"
+    tests_root="$workspace_root/mini-moul/tests"
+    trap cleanup_workspace EXIT INT TERM
+
+    for dir in "$tests_root"/* ; do
         dirname="$(basename "$dir")"
         available_assignments+="$dirname "
         
         if [ -d "$dir" ] && [ "$dirname" == "$project_name" ]; then
             dirname_found=1
-            print_header
             printf "${GREEN} Generating test for ${project_name}...\n${DEFAULT}"
             space
             dirname_found=1
             index=0
             
-            for assignment in $dir/*; do
+            for assignment in "$dir"/*; do
                 questions=$((questions+1))
                 score_false=0
                 assignment_name="$(basename "$assignment")"
-                test_name="$(ls $assignment/*.c | head -n 1)"
-                test_name="$(basename "$test_name")"
-                student_file="../$assignment_name/$test_name"
+                test_source=$(find "$assignment" -maxdepth 1 -type f -name '*.c' | sort | head -n 1)
+
+                if [ -z "$test_source" ]; then
+                    break_score=1
+                    checks=$((checks+1))
+                    printf "${RED}    $assignment_name does not contain a test file.${DEFAULT}\n"
+                    space
+                    if [ $index -gt 0 ]; then
+                        result+=", "
+                    fi
+                    result+="${RED}$assignment_name: KO${DEFAULT}"
+                    ((index++))
+                    continue
+                fi
+
+                test_name="$(basename "$test_source")"
+                student_file="$workspace_root/$assignment_name/$test_name"
                 
                 if [ ! -f "$student_file" ]; then
                     break_score=1
@@ -72,7 +163,7 @@ main()
                         result+=", "
                     fi
                     result+="${GREY}$assignment_name: not turned in${DEFAULT}"
-                elif cc "${compile_flags[@]}" -o test1 $(ls $assignment/*.c | head -n 1); then
+                elif cc "${compile_flags[@]}" -o test1 "$test_source"; then
                     rm test1
                     checks=$((checks+1))
                     passed=$((passed+1))
@@ -80,19 +171,20 @@ main()
                     if [ -d "$assignment" ]; then
                         index2=0
                         
-                        for test in $assignment/*.c; do
+                        for test in "$assignment"/*.c; do
                             ((index2++))
                             checks=$((checks+1))
                             
-                            if cc "${compile_flags[@]}" -o ${test%.c} $test 2> /dev/null; then
+                            test_bin="${test%.c}"
+                            if cc "${compile_flags[@]}" -o "$test_bin" "$test" 2> /dev/null; then
                                 
-                                if ./${test%.c} = 0; then
+                                if "$test_bin" = 0; then
                                     passed=$((passed+1))
                                 else
                                     break_score=1
                                     score_false=1
                                 fi
-                                rm ${test%.c}
+                                rm -f "$test_bin"
                             else
                                 printf "    ""${GREY}[$(($index2+1))] $test_error ${RED}FAILED${DEFAULT}\n"
                             fi
@@ -180,6 +272,11 @@ print_footer()
     space
     PERCENT=$((100 * marks / questions))
     #printf "Total checks:  ""${GREEN}${passed} passed  ${DEFAULT} ""${checks} total"
+    if [ $norminette_skipped -eq 1 ]; then
+        printf "Norminette:   ${GREY}skipped${DEFAULT}\n"
+    else
+        printf "Norminette:   ${GREEN}%s passed${DEFAULT}, ${RED}%s failed${DEFAULT}\n" "$norminette_passed" "$norminette_failed"
+    fi
     printf "Result:        ${result}\n"
     if [ $PERCENT -ge 50 ]; then
         printf "Final score:   ""${GREEN}$(echo $PERCENT | bc)/100${DEFAULT}\n"
@@ -212,8 +309,14 @@ if [ "${1}" = "" ]; then
     printf "Please select an assignment. e.g. './test.sh C01'\n"
     exit 1
 fi
-if [[ "${1}" =~ ^C(0[0-9]|1[0-3])$ ]]; then
-    main "$@"
+assignment="$(printf '%s' "$1" | tr '[:lower:]' '[:upper:]')"
+
+if [[ "$assignment" =~ ^C(0[0-9]|1[0-3])$ ]]; then
+    if [ -z "${2}" ]; then
+        main "$assignment" "$PWD"
+    else
+        main "$assignment" "$2"
+    fi
     printf "$DEFAULT"
     exit
 else

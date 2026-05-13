@@ -1,41 +1,69 @@
 #!/bin/bash
 
-source ~/mini-moulinette/mini-moul/config.sh
-# assignment name
-assignment=NULL
+SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
+source "$SCRIPT_DIR/mini-moul/config.sh"
 
-function handle_sigint {
-  echo "${RED}Script aborted by user. Cleaning up..."
-  rm -R ../mini-moul
-  echo ""
-  echo "${GREEN}Cleaning process done.${DEFAULT}"
-  exit 1
+normalize_project()
+{
+  local project
+
+  project=$(printf '%s' "$1" | tr '[:lower:]' '[:upper:]')
+  if [[ "$project" =~ ^C(0[0-9]|1[0-3])$ ]]; then
+    printf '%s' "$project"
+    return 0
+  fi
+
+  return 1
 }
 
-# Function to determine if current directory matches a pattern
-detect_assignment() {
-  assignment=$(basename "$(pwd)")
-  [[ $assignment =~ ^C(0[0-9]|1[0-3])$ ]]
+usage()
+{
+  printf "Usage: %s [-t C00]\n" "$0"
 }
 
-if detect_assignment; then
-  cp -R ~/mini-moulinette/mini-moul mini-moul
-  run_norminette
-  trap handle_sigint SIGINT
-  cd mini-moul
-  ./test.sh "$assignment"
-  rm -R ../mini-moul
-else
-  printf "${RED}Current directory does not match expected pattern (C[00~13]).${DEFAULT}\n"
-  printf "${RED}Please navigate to an appropriate directory to run tests.${DEFAULT}\n"
+project=""
+
+while getopts ":t:h" opt; do
+  case "$opt" in
+    t)
+      project="$OPTARG"
+      ;;
+    h)
+      usage
+      exit 0
+      ;;
+    :)
+      printf "${RED}Option -%s requires an argument.${DEFAULT}\n" "$OPTARG"
+      usage
+      exit 1
+      ;;
+    \?)
+      usage
+      exit 1
+      ;;
+  esac
+done
+
+shift $((OPTIND - 1))
+
+if [ -z "$project" ] && [ $# -gt 0 ]; then
+  project="$1"
 fi
 
-exit 1
+student_root=$(pwd -P)
 
-run_norminette() {
-  if command -v norminette &> /dev/null; then
-    norminette
-  else
-    echo "norminette not found, skipping norminette checks"
-  fi
-}
+if [ -z "$project" ]; then
+  project=$(basename "$student_root")
+fi
+
+if ! project=$(normalize_project "$project"); then
+  printf "${RED}Invalid argument. Please select between C00 to C13.${DEFAULT}\n"
+  exit 1
+fi
+
+if [ ! -d "$student_root" ]; then
+  printf "${RED}Current directory is not accessible.${DEFAULT}\n"
+  exit 1
+fi
+
+"$SCRIPT_DIR/mini-moul/test.sh" "$project" "$student_root"

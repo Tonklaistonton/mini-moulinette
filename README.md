@@ -66,23 +66,23 @@ echo "alias mini='~/mini-moulinette/mini-moul.sh'" >> ~/.bashrc && source ~/.bas
 ```
 
 
-4. Go to your assignment directory where you want to test: e.g: C02 directory
+4. Go to the directory that contains your assignment files: e.g. the `C02` root directory
 
 ```bash
 cd C02
 ```
 
 
-5. Run using command `mini` with assignment number as argument. e.g: C02.
+5. Run using `mini -t` with the assignment number as argument. The project name is case-insensitive, so `C02` and `c02` are treated the same.
 
 ```bash
-mini C02
+mini -t C02
 ```
 
 e.g: C03
 
 ```bash
-mini C03
+mini -t c03
 ```
 
 6. You can now run it for every assignment directory, where tests are provided. Have fun!
