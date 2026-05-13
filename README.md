@@ -47,7 +47,7 @@ cd ~
 2. Clone the git there.
 
 ```bash
-git clone https://github.com/khairulhaaziq/mini-moulinette.git
+git clone git@github.com:koharu-u/mini-moulinette.git
 ```
 
 
