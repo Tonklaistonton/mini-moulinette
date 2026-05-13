@@ -59,8 +59,20 @@ main()
                 assignment_name="$(basename "$assignment")"
                 test_name="$(ls $assignment/*.c | head -n 1)"
                 test_name="$(basename "$test_name")"
+                student_file="../$assignment_name/$test_name"
                 
-                if cc "${compile_flags[@]}" -o test1 $(ls $assignment/*.c | head -n 1); then
+                if [ ! -f "$student_file" ]; then
+                    break_score=1
+                    checks=$((checks+1))
+                    printf "${GREY}    $assignment_name/$test_name not turned in.${DEFAULT}\n"
+                    printf "${GREY}${BOLD} not turned in ${DEFAULT}${PURPLE} $assignment_name/${DEFAULT}$test_name\n"
+                    space
+                    
+                    if [ $index -gt 0 ]; then
+                        result+=", "
+                    fi
+                    result+="${GREY}$assignment_name: not turned in${DEFAULT}"
+                elif cc "${compile_flags[@]}" -o test1 $(ls $assignment/*.c | head -n 1); then
                     rm test1
                     checks=$((checks+1))
                     passed=$((passed+1))
