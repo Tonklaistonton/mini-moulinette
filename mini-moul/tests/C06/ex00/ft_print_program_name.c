@@ -1,3 +1,5 @@
+#define _POSIX_C_SOURCE 200809L
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -5,6 +7,7 @@
 #include <fcntl.h>
 #include <errno.h>
 #include "../../../utils/constants.h"
+#include "../../../utils/exec_utils.h"
 
 typedef struct s_test
 {
@@ -15,9 +18,13 @@ typedef struct s_test
 
 int run_test(t_test test, int test_num);
 char *modify_string(const char *str);
+static int enter_test_directory(const char *argv0);
 
-int main(void)
+int main(int argc, char **argv)
 {
+  if (argc > 0 && !enter_test_directory(argv[0]))
+    return (-1);
+
   t_test tests[] = {
       {.desc = "ft_print_program_name with one argument",
        .argv = (char *[]){"program_name", NULL},
@@ -55,36 +62,49 @@ int main(void)
 
 int run_test(t_test test, int test_num)
 {
-  fflush(stdout);
   char buf[1024];
-  memset(buf, 0, sizeof(buf));
-  char *program_name = "./program_name"; // Change this to your program name
-  char *copy_program = "cp ../ex00/ft_print_program_name.c program_name.c";
-  char *compile_command = "cc -Wall -Werror -Wextra program_name.c -o program_name"; // Change this to the compile command for your program
+  char *program_name = "./program_name";
+  char *copy_program = "cp ../../../../ex00/ft_print_program_name.c program_name.c";
+  char *compile_command = "cc -Wall -Werror -Wextra program_name.c -o program_name";
+  char *run_argv[8];
   FILE *fp;
-  int result;
+  int result = 0;
+  int exec_status = 0;
+  int i;
+  int j;
 
-  // Compile the program
-  system(copy_program);
-  system(compile_command);
-
-  // Construct the command to run
-  char run_command[1024] = {0};
-  strcat(run_command, program_name);
-  for (int i = 1; test.argv[i]; i++)
+  if (system(copy_program) != 0 || system(compile_command) != 0)
   {
-    strcat(run_command, " ");
-    strcat(run_command, test.argv[i]);
+    printf("    " RED "[%d] %s cannot compile\n" DEFAULT, test_num, test.desc);
+    system("rm -f program_name program_name.c");
+    return (-1);
   }
 
-  // Run the program and capture its output
-  fp = popen(run_command, "r");
+  i = 0;
+  run_argv[i++] = program_name;
+  j = 1;
+  while (test.argv[j] != NULL && i < 7)
+    run_argv[i++] = test.argv[j++];
+  run_argv[i] = NULL;
+
+  if (capture_command_output((char *const *)run_argv, buf, sizeof(buf), 2,
+      &exec_status) != 0)
+  {
+    printf("    " RED "[%d] %s timed out\n" DEFAULT, test_num, test.desc);
+    system("rm -f program_name program_name.c");
+    return (-1);
+  }
+
+  fp = tmpfile();
   if (fp == NULL)
   {
-    fprintf(stderr, "Failed to run command '%s': %s\n", run_command, strerror(errno));
+    fprintf(stderr, "Failed to create temporary stream\n");
+    system("rm -f program_name program_name.c");
     exit(EXIT_FAILURE);
   }
 
+  fwrite(buf, 1, strlen(buf), fp);
+  rewind(fp);
   while (fgets(buf, sizeof(buf), fp) != NULL)
   {
     if (strcmp(buf, test.expected) != 0)
@@ -94,42 +114,27 @@ int run_test(t_test test, int test_num)
     }
     else
     {
-      printf("  " GREEN CHECKMARK GREY " [%d] %s output \"%s\" as expected\n" DEFAULT, test_num,run_command, modify_string(buf));
+      printf("  " GREEN CHECKMARK GREY " [%d] %s output \"%s\" as expected\n" DEFAULT, test_num, test.desc, modify_string(buf));
       result = 0;
     }
   }
+  fclose(fp);
 
-  if (pclose(fp) == -1)
+  if (WIFSIGNALED(exec_status))
   {
-    fprintf(stderr, "Failed to close command stream: %s\n", strerror(errno));
-    exit(EXIT_FAILURE); // Remove the program executable
-    if (remove(program_name) != 0)
-    {
-      fprintf(stderr, "Failed to remove program '%s': %s\n", program_name, strerror(errno));
-      exit(EXIT_FAILURE);
-    }
-
-    if (remove("program_name.c") != 0)
-    {
-      fprintf(stderr, "Failed to remove program '%s': %s\n", "program_name.c", strerror(errno));
-      exit(EXIT_FAILURE);
-    }
-
-    return (result);
+    if (WTERMSIG(exec_status) == SIGSEGV)
+      printf("    " RED "[%d] %s crashed with segmentation fault\n" DEFAULT, test_num, test.desc);
+    else
+      printf("    " RED "[%d] %s crashed with signal %d\n" DEFAULT, test_num, test.desc, WTERMSIG(exec_status));
+    result = -1;
+  }
+  else if (WIFEXITED(exec_status) && WEXITSTATUS(exec_status) != 0)
+  {
+    printf("    " RED "[%d] %s exited with status %d\n" DEFAULT, test_num, test.desc, WEXITSTATUS(exec_status));
+    result = -1;
   }
 
-  // Remove the program executable
-  if (remove(program_name) != 0)
-  {
-    fprintf(stderr, "Failed to remove program '%s': %s\n", program_name, strerror(errno));
-    exit(EXIT_FAILURE);
-  }
-
-  if (remove("program_name.c") != 0)
-  {
-    fprintf(stderr, "Failed to remove program '%s': %s\n", "program_name.c", strerror(errno));
-    exit(EXIT_FAILURE);
-  }
+  system("rm -f program_name program_name.c");
 
   return (result);
 }
@@ -148,4 +153,26 @@ char *modify_string(const char *str)
   {
     return strdup(str);
   }
+}
+
+static int enter_test_directory(const char *argv0)
+{
+  char *path;
+  char *slash;
+
+  path = strdup(argv0);
+  if (path == NULL)
+    return (0);
+  slash = strrchr(path, '/');
+  if (slash != NULL)
+    *slash = '\0';
+  else
+    strcpy(path, ".");
+  if (chdir(path) != 0)
+  {
+    free(path);
+    return (0);
+  }
+  free(path);
+  return (1);
 }
