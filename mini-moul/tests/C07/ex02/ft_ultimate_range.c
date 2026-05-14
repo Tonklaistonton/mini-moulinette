@@ -105,7 +105,7 @@ int run_tests(t_test *tests, int count)
     for (i = 0; i < count; i++)
     {
         int *result = NULL;
-        int expected_size = (tests[i].max - tests[i].min);
+        int expected_size = tests[i].expected_return;
 
         int range_size = ft_ultimate_range(&result, tests[i].min, tests[i].max);
 
@@ -136,16 +136,16 @@ int run_tests(t_test *tests, int count)
         }
         else if (memcmp(result, tests[i].expected_range, expected_size * sizeof(int)) != 0)
         {
-            printf("    " RED "[%d] %s Expected { ", i + 1, tests[i].desc);
-            for (int j = 0; j < expected_size; j++)
-            {
-                printf("%d, ", tests[i].expected_range[j]);
-            }
-            printf("}, got { ");
-            for (int j = 0; j < expected_size; j++)
-            {
-                printf("%d, ", result[j]);
-            }
+                printf("    " RED "[%d] %s Expected { ", i + 1, tests[i].desc);
+                for (int j = 0; j < expected_size; j++)
+                {
+                    printf("%d, ", tests[i].expected_range[j]);
+                }
+                printf("}, got { ");
+                for (int j = 0; j < expected_size; j++)
+                {
+                    printf("%d, ", result[j]);
+                }
             printf("}\n" DEFAULT);
             error--;
         }

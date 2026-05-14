@@ -48,15 +48,15 @@ int run_tests(t_test *tests, int count)
         int i;
         int error = 0;
 
-        for (i = 0; i < count; i++)
-        {
-                int *result = ft_range(tests[i].min, tests[i].max);
-                int expected_size = (tests[i].expected == NULL) ? 0 : (tests[i].max - tests[i].min);
+	for (i = 0; i < count; i++)
+	{
+		int *result = ft_range(tests[i].min, tests[i].max);
+		int expected_size = (tests[i].expected == NULL) ? 0 : (tests[i].max - tests[i].min);
 
-                if (tests[i].min >= tests[i].max)
-                {
-                        if (result != NULL)
-                        {
+		if (tests[i].min >= tests[i].max)
+		{
+			if (result != NULL)
+			{
                                 printf("    " RED "[%d] %s Expected NULL, got %p\n" DEFAULT, i + 1, tests[i].desc, result);
                                 error -= 1;
                         }else
@@ -64,23 +64,28 @@ int run_tests(t_test *tests, int count)
                                 printf("  " GREEN CHECKMARK GREY " [%d] %s Expected NULL, got NULL\n" DEFAULT, i + 1, tests[i].desc);
                         }
                 }
-                else if (tests[i].expected == NULL)
-                {
-                        if (result != NULL)
-                        {
-                                printf("    " RED "[%d] %s Expected NULL, got %p\n" DEFAULT, i + 1, tests[i].desc, result);
-                                error -= 1;
-                        }
-                }
-                else if (memcmp(result, tests[i].expected, expected_size) != 0)
-                {
-                        printf("    " RED "[%d] %s Expected %d, got %d\n" DEFAULT, i + 1, tests[i].desc, *tests[i].expected, result[i]);
-                        error -= 1;
-                }
-                else
-                {
-                        printf("  " GREEN CHECKMARK GREY " [%d] %s Expected %d, got %d\n" DEFAULT, i + 1, tests[i].desc, *tests[i].expected, result[i]);
-                }
+		else if (tests[i].expected == NULL)
+		{
+			if (result != NULL)
+			{
+				printf("    " RED "[%d] %s Expected NULL, got %p\n" DEFAULT, i + 1, tests[i].desc, result);
+				error -= 1;
+			}
+		}
+		else if (result == NULL)
+		{
+			printf("    " RED "[%d] %s Expected non-NULL, got NULL\n" DEFAULT, i + 1, tests[i].desc);
+			error -= 1;
+		}
+		else if (memcmp(result, tests[i].expected, expected_size * (int)sizeof(int)) != 0)
+		{
+			printf("    " RED "[%d] %s Expected %d, got %d\n" DEFAULT, i + 1, tests[i].desc, *tests[i].expected, result[0]);
+			error -= 1;
+		}
+		else
+		{
+			printf("  " GREEN CHECKMARK GREY " [%d] %s Expected %d, got %d\n" DEFAULT, i + 1, tests[i].desc, *tests[i].expected, result[0]);
+		}
 
                 free(result);
         }

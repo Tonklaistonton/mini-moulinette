@@ -178,7 +178,7 @@ main()
                             test_bin="${test%.c}"
                             if cc "${compile_flags[@]}" -o "$test_bin" "$test" 2> /dev/null; then
                                 
-                                if "$test_bin" = 0; then
+                                if "$test_bin"; then
                                     passed=$((passed+1))
                                 else
                                     break_score=1
