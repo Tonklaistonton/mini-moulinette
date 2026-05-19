@@ -57,10 +57,12 @@ get_version_label() {
 
 run_norminette() {
   local root="$1"
+  local project_name="$2"
   local file
   local output
   local relative_path
   local found=0
+  local -a norminette_cmd
 
   if ! command -v norminette >/dev/null 2>&1; then
     printf "${GREY}norminette not found, skipping norminette checks.${DEFAULT}\n"
@@ -69,11 +71,16 @@ run_norminette() {
     return 0
   fi
 
+  norminette_cmd=(norminette)
+  if [ "$project_name" = "C08" ]; then
+    norminette_cmd+=(-R CheckDefine)
+  fi
+
   while IFS= read -r file; do
     [ -n "$file" ] || continue
     found=1
     relative_path="${file#"$root"/}"
-    output=$(norminette "$file" 2>&1)
+    output=$("${norminette_cmd[@]}" "$file" 2>&1)
     if [ $? -eq 0 ]; then
       norminette_passed=$((norminette_passed + 1))
       printf "${GREEN}NORMINETTE PASS${DEFAULT} ${PURPLE}%s${DEFAULT}\n" "$relative_path"
@@ -90,6 +97,35 @@ run_norminette() {
     printf "${GREY}No source files found for norminette.${DEFAULT}\n"
   fi
   space
+}
+
+get_expected_submission_files() {
+  local project_name="$1"
+  local assignment_name="$2"
+
+  case "$project_name:$assignment_name" in
+  C08:ex00)
+    printf '%s\n' "ft.h"
+    ;;
+  C08:ex01)
+    printf '%s\n' "ft_boolean.h"
+    ;;
+  C08:ex02)
+    printf '%s\n' "ft_abs.h"
+    ;;
+  C08:ex03)
+    printf '%s\n' "ft_point.h"
+    ;;
+  C08:ex04)
+    printf '%s\n' "ft_stock_str.h" "ft_strs_to_tab.c"
+    ;;
+  C08:ex05)
+    printf '%s\n' "ft_show_tab.c"
+    ;;
+  *)
+    printf '%s\n' "$(basename "$3")"
+    ;;
+  esac
 }
 
 prepare_workspace() {
@@ -158,7 +194,7 @@ main() {
   start_time=$(date +%s)
   read -r -a compile_flags <<<"$(get_compilation_flags "$project_name")"
   print_header
-  run_norminette "$student_root"
+  run_norminette "$student_root" "$project_name"
 
   workspace_root=$(mktemp -d "/tmp/mini-moul.XXXXXX")
   prepare_workspace "$student_root" "$workspace_root"
@@ -177,6 +213,10 @@ main() {
       index=0
 
       for assignment in "$dir"/*; do
+        local expected_file
+        local missing_files=""
+        local has_missing_file=0
+
         questions=$((questions + 1))
         score_false=0
         assignment_name="$(basename "$assignment")"
@@ -196,13 +236,22 @@ main() {
         fi
 
         test_name="$(basename "$test_source")"
-        student_file="$workspace_root/$assignment_name/$test_name"
+        while IFS= read -r expected_file; do
+          [ -n "$expected_file" ] || continue
+          if [ ! -f "$workspace_root/$assignment_name/$expected_file" ]; then
+            has_missing_file=1
+            if [ -n "$missing_files" ]; then
+              missing_files+=", "
+            fi
+            missing_files+="$assignment_name/$expected_file"
+          fi
+        done < <(get_expected_submission_files "$project_name" "$assignment_name" "$test_source")
 
-        if [ ! -f "$student_file" ]; then
+        if [ $has_missing_file -eq 1 ]; then
           break_score=1
           checks=$((checks + 1))
-          printf "${GREY}    $assignment_name/$test_name not turned in.${DEFAULT}\n"
-          printf "${GREY}${BOLD} not turned in ${DEFAULT}${PURPLE} $assignment_name/${DEFAULT}$test_name\n"
+          printf "${GREY}    Missing required file(s): %s.${DEFAULT}\n" "$missing_files"
+          printf "${GREY}${BOLD} not turned in ${DEFAULT}${PURPLE}%s${DEFAULT}\n" "$missing_files"
           space
 
           if [ $index -gt 0 ]; then

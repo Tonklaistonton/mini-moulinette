@@ -6,6 +6,7 @@
 #include "../../../utils/constants.h"
 
 #define FUNCTION_COUNT 5
+#define PATH_BUFFER_SIZE 4096
 
 typedef struct
 {
@@ -13,7 +14,26 @@ typedef struct
   bool exists;
 } function_check;
 
-int main()
+static int build_header_path(char *header_path, size_t size)
+{
+  char source_dir[PATH_BUFFER_SIZE];
+  char *last_slash;
+  int written;
+
+  if (strlen(__FILE__) >= sizeof(source_dir))
+    return 1;
+  strcpy(source_dir, __FILE__);
+  last_slash = strrchr(source_dir, '/');
+  if (last_slash == NULL)
+    strcpy(source_dir, ".");
+  else
+    *last_slash = '\0';
+  written = snprintf(header_path, size, "%s/../../../../ex00/ft.h",
+      source_dir);
+  return (written < 0 || (size_t)written >= size);
+}
+
+int main(void)
 {
   function_check functions[FUNCTION_COUNT] = {
       {"ft_putchar", false},
@@ -24,7 +44,20 @@ int main()
   };
 
   char buffer[128];
-  FILE *header_file = popen("cat ../ex00/ft.h", "r");
+  char header_path[PATH_BUFFER_SIZE];
+  FILE *header_file;
+
+  if (build_header_path(header_path, sizeof(header_path)) != 0)
+  {
+    fprintf(stderr, "Unable to build ft.h path\n");
+    return 1;
+  }
+  header_file = fopen(header_path, "r");
+  if (header_file == NULL)
+  {
+    perror(header_path);
+    return 1;
+  }
   while (fgets(buffer, sizeof(buffer), header_file))
   {
     for (int i = 0; i < FUNCTION_COUNT; i++)
@@ -35,7 +68,7 @@ int main()
       }
     }
   }
-  pclose(header_file);
+  fclose(header_file);
 
   for (int i = 0; i < FUNCTION_COUNT; i++)
   {
