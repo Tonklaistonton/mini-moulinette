@@ -8,7 +8,7 @@ normalize_project()
   local project
 
   project=$(printf '%s' "$1" | tr '[:lower:]' '[:upper:]')
-  if [[ "$project" =~ ^C(0[0-9]|1[0-3])$ ]]; then
+  if [[ "$project" =~ ^(C(0[0-9]|1[0-3])|SHELL(0[0-1]))$ ]]; then
     printf '%s' "$project"
     return 0
   fi
@@ -57,7 +57,7 @@ if [ -z "$project" ]; then
 fi
 
 if ! project=$(normalize_project "$project"); then
-  printf "${RED}Invalid argument. Please select between C00 to C13.${DEFAULT}\n"
+  printf "${RED}Invalid argument. Please select between C00-C13 or Shell00-Shell01.${DEFAULT}\n"
   exit 1
 fi
 

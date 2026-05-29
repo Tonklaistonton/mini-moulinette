@@ -41,6 +41,32 @@ get_compilation_flags() {
   esac
 }
 
+is_shell_project() {
+  case "$1" in
+  SHELL*) return 0 ;;
+  *) return 1 ;;
+  esac
+}
+
+get_shell_expected_files() {
+  local project_name="$1"
+  local assignment_name="$2"
+
+  case "$project_name:$assignment_name" in
+  SHELL00:ex00) printf '%s\n' "z" ;;
+  SHELL00:ex01) printf '%s\n' "testShell00.tar" ;;
+  SHELL00:ex02) printf '%s\n' "exo2.tar" ;;
+  SHELL00:ex03) printf '%s\n' "id_rsa_pub" ;;
+  SHELL00:ex04) printf '%s\n' "midLS" ;;
+  SHELL00:ex05) printf '%s\n' "git_commit.sh" ;;
+  SHELL00:ex06) printf '%s\n' "git_ignore.sh" ;;
+  SHELL00:ex07) printf '%s\n' "b" ;;
+  SHELL00:ex08) printf '%s\n' "clean" ;;
+  SHELL00:ex09) printf '%s\n' "ft_magic" ;;
+  *) return 1 ;;
+  esac
+}
+
 get_version_label() {
   local repo_root
   local commit
@@ -204,8 +230,9 @@ main() {
   for dir in "$tests_root"/*; do
     dirname="$(basename "$dir")"
     available_assignments+="$dirname "
+    dirname_upper="$(printf '%s' "$dirname" | tr '[:lower:]' '[:upper:]')"
 
-    if [ -d "$dir" ] && [ "$dirname" == "$project_name" ]; then
+    if [ -d "$dir" ] && [ "$dirname_upper" == "$project_name" ]; then
       dirname_found=1
       printf "${GREEN} Generating test for ${project_name}...\n${DEFAULT}"
       space
@@ -220,6 +247,66 @@ main() {
         questions=$((questions + 1))
         score_false=0
         assignment_name="$(basename "$assignment")"
+
+        # === Shell project handling ===
+        if is_shell_project "$project_name"; then
+          test_source="$assignment/checker.sh"
+          if [ ! -f "$test_source" ]; then
+            break_score=1
+            checks=$((checks + 1))
+            printf "${RED}    $assignment_name does not contain a checker script.${DEFAULT}\n"
+            space
+            if [ $index -gt 0 ]; then
+              result+=", "
+            fi
+            result+="${RED}$assignment_name: KO${DEFAULT}"
+            ((index++))
+            continue
+          fi
+          test_name="checker.sh"
+          while IFS= read -r expected_file; do
+            [ -n "$expected_file" ] || continue
+            if [ ! -f "$workspace_root/$assignment_name/$expected_file" ]; then
+              has_missing_file=1
+              if [ -n "$missing_files" ]; then
+                missing_files+=", "
+              fi
+              missing_files+="$assignment_name/$expected_file"
+            fi
+          done < <(get_shell_expected_files "$project_name" "$assignment_name")
+          if [ $has_missing_file -eq 1 ]; then
+            break_score=1
+            checks=$((checks + 1))
+            printf "${GREY}    Missing required file(s): %s.${DEFAULT}\n" "$missing_files"
+            printf "${GREY}${BOLD} not turned in ${DEFAULT}${PURPLE}%s${DEFAULT}\n" "$missing_files"
+            space
+            if [ $index -gt 0 ]; then
+              result+=", "
+            fi
+            result+="${GREY}$assignment_name: not turned in${DEFAULT}"
+          else
+            checks=$((checks + 1))
+            if run_test_binary bash "$test_source" "$workspace_root/$assignment_name"; then
+              passed=$((passed + 1))
+            else
+              status=$?
+              break_score=1
+              score_false=1
+              case "$status" in
+              124) test_error="timed out" ;;
+              139) test_error="segmentation fault" ;;
+              *) test_error="checks failed" ;;
+              esac
+              printf "    ""${GREY}$test_error ${RED}FAILED${DEFAULT}\n"
+            fi
+            print_test_result
+            space
+          fi
+          ((index++))
+          continue
+        fi
+
+        # === C project handling ===
         test_source=$(find "$assignment" -maxdepth 1 -type f -name '*.c' | sort | head -n 1)
 
         if [ -z "$test_source" ]; then
@@ -406,7 +493,7 @@ if [ "${1}" = "" ]; then
 fi
 assignment="$(printf '%s' "$1" | tr '[:lower:]' '[:upper:]')"
 
-if [[ "$assignment" =~ ^C(0[0-9]|1[0-3])$ ]]; then
+if [[ "$assignment" =~ ^(C(0[0-9]|1[0-3])|SHELL(0[0-1]))$ ]]; then
   if [ -z "${2}" ]; then
     main "$assignment" "$PWD"
   else
@@ -415,5 +502,5 @@ if [[ "$assignment" =~ ^C(0[0-9]|1[0-3])$ ]]; then
   printf "$DEFAULT"
   exit
 else
-  printf "${RED}Invalid argument. Please select between C00 to C13${DEFAULT}\n"
+  printf "${RED}Invalid argument. Please select between C00-C13 or Shell00-Shell01${DEFAULT}\n"
 fi
