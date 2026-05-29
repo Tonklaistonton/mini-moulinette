@@ -264,7 +264,10 @@ main() {
             ((index++))
             continue
           fi
-          test_name="checker.sh"
+          test_name=$(get_shell_expected_files "$project_name" "$assignment_name" | head -n 1)
+          if [ -z "$test_name" ]; then
+            test_name="checker.sh"
+          fi
           while IFS= read -r expected_file; do
             [ -n "$expected_file" ] || continue
             if [ ! -f "$workspace_root/$assignment_name/$expected_file" ]; then
