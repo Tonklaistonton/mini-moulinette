@@ -240,6 +240,7 @@ main() {
       index=0
 
       for assignment in "$dir"/*; do
+        [ -d "$assignment" ] || continue
         local expected_file
         local missing_files=""
         local has_missing_file=0
